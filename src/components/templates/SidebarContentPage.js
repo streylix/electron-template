@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Inbox, Users, FileText, Settings, Bell, Calendar, PieChart, TrendingUp, CreditCard, User, Shield } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Inbox, Users, FileText, Settings, Bell, Calendar, PieChart, TrendingUp, CreditCard, User, Shield, Globe, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import ProfileView from '../common/ProfileView';
 import TransitionContainer from '../common/TransitionContainer';
 import LoadingCircle from '../common/LoadingCircle';
@@ -10,6 +10,10 @@ const SidebarContentPage = ({ onComplete }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isTestLoading, setIsTestLoading] = useState(false);
   const [testLoadingProgress, setTestLoadingProgress] = useState(0);
+  const [browserUrl, setBrowserUrl] = useState('https://www.google.com');
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const webviewRef = useRef(null);
   const { showSnackBar } = useSnackBar();
   
   // Sample list items for the sidebar
@@ -20,6 +24,7 @@ const SidebarContentPage = ({ onComplete }) => {
     { id: 4, title: 'Notifications', icon: <Bell size={18} /> },
     { id: 5, title: 'Calendar', icon: <Calendar size={18} /> },
     { id: 6, title: 'Settings', icon: <Settings size={18} /> },
+    { id: 7, title: 'Browser', icon: <Globe size={18} /> },
   ];
   
   // Dashboard card data
@@ -131,6 +136,61 @@ const SidebarContentPage = ({ onComplete }) => {
       type === 'error' ? 'Try Again' : 'Dismiss', 
       () => console.log(`Action clicked for ${type}`)
     );
+  };
+  
+  // Initialize webview event listeners
+  useEffect(() => {
+    const setupWebview = () => {
+      const webview = document.querySelector('webview');
+      if (webview) {
+        webviewRef.current = webview;
+        
+        // Update URL when navigation finishes
+        webview.addEventListener('did-navigate', (e) => {
+          setBrowserUrl(e.url);
+          setCanGoBack(webview.canGoBack());
+          setCanGoForward(webview.canGoForward());
+        });
+        
+        // Update URL when navigation within the page occurs
+        webview.addEventListener('did-navigate-in-page', (e) => {
+          setBrowserUrl(e.url);
+          setCanGoBack(webview.canGoBack());
+          setCanGoForward(webview.canGoForward());
+        });
+        
+        // Check if can go back/forward
+        webview.addEventListener('dom-ready', () => {
+          setCanGoBack(webview.canGoBack());
+          setCanGoForward(webview.canGoForward());
+        });
+      }
+    };
+    
+    // We need to wait a bit for the webview to be rendered
+    if (selectedItem === 7) {
+      const timer = setTimeout(setupWebview, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedItem]);
+
+  // Browser navigation functions
+  const browserGoBack = () => {
+    if (webviewRef.current && webviewRef.current.canGoBack()) {
+      webviewRef.current.goBack();
+    }
+  };
+  
+  const browserGoForward = () => {
+    if (webviewRef.current && webviewRef.current.canGoForward()) {
+      webviewRef.current.goForward();
+    }
+  };
+  
+  const browserRefresh = () => {
+    if (webviewRef.current) {
+      webviewRef.current.reload();
+    }
   };
   
   // Sample content for each item
@@ -429,6 +489,65 @@ const SidebarContentPage = ({ onComplete }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )
+      },
+      7: {
+        title: 'Browser',
+        description: 'Embedded browser for captchas and manual verification',
+        component: (
+          <div className="browser-content">
+            <div className="browser-controls">
+              <button 
+                className={`browser-nav-btn ${!canGoBack ? 'disabled' : ''}`}
+                onClick={browserGoBack}
+                disabled={!canGoBack}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                className={`browser-nav-btn ${!canGoForward ? 'disabled' : ''}`}
+                onClick={browserGoForward}
+                disabled={!canGoForward}
+              >
+                <ChevronRight size={16} />
+              </button>
+              <input 
+                type="text" 
+                className="url-input" 
+                value={browserUrl}
+                onChange={(e) => setBrowserUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Ensure URL has proper format
+                    let url = e.target.value;
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                      url = 'https://' + url;
+                      setBrowserUrl(url);
+                    }
+                    // Navigate to new URL
+                    if (webviewRef.current) {
+                      webviewRef.current.src = url;
+                    }
+                  }
+                }}
+              />
+              <button 
+                className="browser-refresh-btn"
+                onClick={browserRefresh}
+              >
+                <RefreshCw size={16} />
+                <span>Refresh</span>
+              </button>
+            </div>
+            <div className="browser-container">
+              {/* Electron webview tag for embedded browser */}
+              <webview 
+                src={browserUrl}
+                style={{width: '100%', height: '100%'}}
+                allowpopups="true"
+              ></webview>
             </div>
           </div>
         )
