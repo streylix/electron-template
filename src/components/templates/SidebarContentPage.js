@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Inbox, Users, FileText, Settings, Bell, Calendar, PieChart, TrendingUp, CreditCard, User, Shield, Globe, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Inbox, Users, FileText, Settings, Bell, Calendar, PieChart, TrendingUp, CreditCard, User, Shield, Globe, ChevronLeft, ChevronRight, RefreshCw, Check, X } from 'lucide-react';
 import ProfileView from '../common/ProfileView';
 import TransitionContainer from '../common/TransitionContainer';
 import LoadingCircle from '../common/LoadingCircle';
@@ -13,6 +13,21 @@ const SidebarContentPage = ({ onComplete }) => {
   const [browserUrl, setBrowserUrl] = useState('https://www.google.com');
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [expandedSteps, setExpandedSteps] = useState({}); // Track which steps are expanded
+  const [stepStatuses, setStepStatuses] = useState({
+    1: 'complete',
+    2: 'in-progress',
+    3: 'pending',
+    4: 'pending'
+  });
+  const [isProgressSimulating, setIsProgressSimulating] = useState(false);
+  const [progressValues, setProgressValues] = useState({
+    1: 100,
+    2: 67,
+    3: 0,
+    4: 0
+  });
+  const simulationTimers = useRef([]);
   const webviewRef = useRef(null);
   const { showSnackBar } = useSnackBar();
   
@@ -120,6 +135,142 @@ const SidebarContentPage = ({ onComplete }) => {
       setTestLoadingProgress(progress);
     }, 500);
   };
+  
+  // Toggle step expansion in progress tracker
+  const toggleStepExpansion = (stepId) => {
+    setExpandedSteps(prev => ({
+      ...prev,
+      [stepId]: !prev[stepId]
+    }));
+  };
+  
+  // Clear all simulation timers
+  const clearAllTimers = () => {
+    simulationTimers.current.forEach(timer => clearTimeout(timer));
+    simulationTimers.current = [];
+  };
+  
+  // Simulate progress tracker steps with real-time progress calculation
+  const simulateProgressTracker = () => {
+    if (isProgressSimulating) return;
+    
+    setIsProgressSimulating(true);
+    clearAllTimers();
+    
+    // Reset steps
+    setStepStatuses({
+      1: 'complete',
+      2: 'in-progress',
+      3: 'pending',
+      4: 'pending'
+    });
+    
+    setProgressValues({
+      1: 100,
+      2: 0,
+      3: 0,
+      4: 0
+    });
+    
+    // Simulate step 2 progress incrementing from 0 to 100%
+    let step2Progress = 0;
+    const step2Interval = 50; // Update every 50ms
+    const step2Duration = 3000; // Complete in 3 seconds
+    const step2Increment = 100 / (step2Duration / step2Interval);
+    
+    const updateStep2 = () => {
+      step2Progress += step2Increment;
+      if (step2Progress >= 100) {
+        step2Progress = 100;
+        setProgressValues(prev => ({ ...prev, 2: 100 }));
+        setStepStatuses(prev => ({
+          ...prev,
+          2: 'complete',
+          3: 'in-progress'
+        }));
+        
+        // Start step 3 progress after step 2 completes
+        let step3Progress = 0;
+        const step3Interval = 50;
+        const step3Duration = 4000; // Complete in 4 seconds
+        const step3Increment = 100 / (step3Duration / step3Interval);
+        
+        const updateStep3 = () => {
+          step3Progress += step3Increment;
+          if (step3Progress >= 100) {
+            step3Progress = 100;
+            setProgressValues(prev => ({ ...prev, 3: 100 }));
+            setStepStatuses(prev => ({
+              ...prev,
+              3: 'complete',
+              4: 'in-progress'
+            }));
+            
+            // Start step 4 progress after step 3 completes
+            let step4Progress = 0;
+            const step4Interval = 50;
+            const step4Duration = 3000; // Run for 3 seconds before failing
+            const step4Increment = 50 / (step4Duration / step4Interval); // Only reach 50% before failing
+            
+            const updateStep4 = () => {
+              step4Progress += step4Increment;
+              if (step4Progress >= 50) { // Fail at 50%
+                setProgressValues(prev => ({ ...prev, 4: 50 }));
+                
+                // Set to failed after a short delay
+                const failTimer = setTimeout(() => {
+                  setStepStatuses(prev => ({
+                    ...prev,
+                    4: 'failed'
+                  }));
+                  setIsProgressSimulating(false);
+                  
+                  // Expand step 4 to show failure details
+                  setExpandedSteps(prev => ({
+                    ...prev,
+                    4: true
+                  }));
+                }, 500);
+                
+                simulationTimers.current.push(failTimer);
+                return;
+              }
+              
+              setProgressValues(prev => ({ ...prev, 4: Math.round(step4Progress) }));
+              const timer = setTimeout(updateStep4, step4Interval);
+              simulationTimers.current.push(timer);
+            };
+            
+            const step4StartTimer = setTimeout(updateStep4, 500);
+            simulationTimers.current.push(step4StartTimer);
+            return;
+          }
+          
+          setProgressValues(prev => ({ ...prev, 3: Math.round(step3Progress) }));
+          const timer = setTimeout(updateStep3, step3Interval);
+          simulationTimers.current.push(timer);
+        };
+        
+        const step3StartTimer = setTimeout(updateStep3, 500);
+        simulationTimers.current.push(step3StartTimer);
+        return;
+      }
+      
+      setProgressValues(prev => ({ ...prev, 2: Math.round(step2Progress) }));
+      const timer = setTimeout(updateStep2, step2Interval);
+      simulationTimers.current.push(timer);
+    };
+    
+    const initialTimer = setTimeout(updateStep2, 500);
+    simulationTimers.current.push(initialTimer);
+  };
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+    };
+  }, []);
   
   // Test snackbar
   const testSnackBar = (type) => {
@@ -430,6 +581,237 @@ const SidebarContentPage = ({ onComplete }) => {
                           <p>It demonstrates a vertical crossfade transition between content and loading states.</p>
                         </div>
                       </TransitionContainer>
+                    </div>
+                  </div>
+                  
+                  <div className="settings-section">
+                    <h4>Progress Tracker</h4>
+                    <p>Test multi-step progress indicator with status feedback</p>
+                    <button 
+                      className="settings-button"
+                      onClick={simulateProgressTracker}
+                      disabled={isProgressSimulating}
+                    >
+                      {isProgressSimulating ? 'Simulating...' : 'Simulate Progress Tracker'}
+                    </button>
+                    <div className="progress-tracker-container">
+                      <div className="progress-step">
+                        <div className={`step-status ${stepStatuses[1]}`}>
+                          {stepStatuses[1] === 'complete' ? <Check size={16} /> : 
+                           stepStatuses[1] === 'in-progress' ? <LoadingCircle size={16} /> : '⭘'}
+                        </div>
+                        <div className="step-label">Step 1: Planning</div>
+                        <div className="step-percentage complete">{progressValues[1]}%</div>
+                        <button 
+                          className="view-details-btn"
+                          onClick={() => toggleStepExpansion(1)}
+                        >
+                          {expandedSteps[1] ? 'Hide' : 'Details'}
+                        </button>
+                      </div>
+                      {expandedSteps[1] && (
+                        <div className="step-details">
+                          <div className="step-detail-item">
+                            <span className="detail-label">Started:</span>
+                            <span className="detail-value">May 10, 2025</span>
+                          </div>
+                          <div className="step-detail-item">
+                            <span className="detail-label">Completed:</span>
+                            <span className="detail-value">May 12, 2025</span>
+                          </div>
+                          <div className="step-detail-item">
+                            <span className="detail-label">Status:</span>
+                            <span className="detail-value success">Complete</span>
+                          </div>
+                          <div className="step-notes">
+                            <p>All planning documents have been approved and requirements finalized.</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="progress-step">
+                        <div className={`step-status ${stepStatuses[2]}`}>
+                          {stepStatuses[2] === 'complete' ? <Check size={16} /> : 
+                           stepStatuses[2] === 'in-progress' ? <LoadingCircle size={16} /> : '⭘'}
+                        </div>
+                        <div className={`step-label ${stepStatuses[2] === 'in-progress' ? 'loading' : ''}`}>
+                          {stepStatuses[2] === 'in-progress' ? 'Step in progress...' : 'Step 2: Development'}
+                        </div>
+                        <div className={`step-percentage ${stepStatuses[2]}`}>
+                          {progressValues[2]}%
+                        </div>
+                        <button 
+                          className="view-details-btn"
+                          onClick={() => toggleStepExpansion(2)}
+                        >
+                          {expandedSteps[2] ? 'Hide' : 'Details'}
+                        </button>
+                      </div>
+                      {expandedSteps[2] && (
+                        <div className="step-details">
+                          <div className="step-detail-item">
+                            <span className="detail-label">Started:</span>
+                            <span className="detail-value">May 13, 2025</span>
+                          </div>
+                          <div className="step-detail-item">
+                            <span className="detail-label">Progress:</span>
+                            <span className="detail-value">{progressValues[2]}%</span>
+                          </div>
+                          <div className="step-detail-item">
+                            <span className="detail-label">Status:</span>
+                            <span className={`detail-value ${stepStatuses[2] === 'in-progress' ? 'in-progress' : stepStatuses[2]}`}>
+                              {stepStatuses[2] === 'complete' ? 'Complete' : 
+                               stepStatuses[2] === 'in-progress' ? 'In Progress' : 'Pending'}
+                            </span>
+                          </div>
+                          {stepStatuses[2] === 'in-progress' && (
+                            <div className="step-progress-bar">
+                              <div className="step-progress-fill" style={{ width: `${progressValues[2]}%` }}></div>
+                            </div>
+                          )}
+                          <div className="step-notes">
+                            <p>Core functionality implemented. Working on UI components and integrations.</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="progress-step">
+                        <div className={`step-status ${stepStatuses[3]}`}>
+                          {stepStatuses[3] === 'complete' ? <Check size={16} /> : 
+                           stepStatuses[3] === 'in-progress' ? <LoadingCircle size={16} /> : '⭘'}
+                        </div>
+                        <div className={`step-label ${stepStatuses[3] === 'in-progress' ? 'loading' : ''}`}>
+                          {stepStatuses[3] === 'in-progress' ? 'Step in progress...' : 'Step 3: Testing'}
+                        </div>
+                        <div className={`step-percentage ${stepStatuses[3]}`}>
+                          {progressValues[3]}%
+                        </div>
+                        <button 
+                          className="view-details-btn"
+                          onClick={() => toggleStepExpansion(3)}
+                        >
+                          {expandedSteps[3] ? 'Hide' : 'Details'}
+                        </button>
+                      </div>
+                      {expandedSteps[3] && (
+                        <div className="step-details">
+                          <div className="step-detail-item">
+                            <span className="detail-label">
+                              {stepStatuses[3] === 'in-progress' || stepStatuses[3] === 'complete' ? 'Started:' : 'Expected Start:'}
+                            </span>
+                            <span className="detail-value">May 20, 2025</span>
+                          </div>
+                          {(stepStatuses[3] === 'in-progress' || stepStatuses[3] === 'complete') && (
+                            <div className="step-detail-item">
+                              <span className="detail-label">Progress:</span>
+                              <span className="detail-value">{progressValues[3]}%</span>
+                            </div>
+                          )}
+                          <div className="step-detail-item">
+                            <span className="detail-label">Status:</span>
+                            <span className={`detail-value ${stepStatuses[3]}`}>
+                              {stepStatuses[3] === 'complete' ? 'Complete' : 
+                               stepStatuses[3] === 'in-progress' ? 'In Progress' : 'Pending'}
+                            </span>
+                          </div>
+                          {stepStatuses[3] === 'in-progress' && (
+                            <div className="step-progress-bar">
+                              <div className="step-progress-fill" style={{ width: `${progressValues[3]}%` }}></div>
+                            </div>
+                          )}
+                          <div className="step-notes">
+                            <p>
+                              {stepStatuses[3] === 'complete' ? 'All tests completed successfully.' :
+                               stepStatuses[3] === 'in-progress' ? 'Running test suite. Integration tests in progress.' :
+                               'Test plan prepared. Waiting for development phase to complete.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="progress-step">
+                        <div className={`step-status ${stepStatuses[4]}`}>
+                          {stepStatuses[4] === 'complete' ? <Check size={16} /> : 
+                           stepStatuses[4] === 'in-progress' ? <LoadingCircle size={16} /> : 
+                           stepStatuses[4] === 'failed' ? <X size={16} /> : '⭘'}
+                        </div>
+                        <div className={`step-label ${stepStatuses[4] === 'in-progress' ? 'loading' : ''}`}>
+                          {stepStatuses[4] === 'in-progress' ? 'Step in progress...' : 'Step 4: Deployment'}
+                        </div>
+                        <div className={`step-percentage ${stepStatuses[4]}`}>
+                          {progressValues[4]}%
+                        </div>
+                        <button 
+                          className="view-details-btn"
+                          onClick={() => toggleStepExpansion(4)}
+                        >
+                          {expandedSteps[4] ? 'Hide' : 'Details'}
+                        </button>
+                      </div>
+                      {expandedSteps[4] && (
+                        <div className="step-details">
+                          {stepStatuses[4] === 'failed' ? (
+                            <>
+                              <div className="step-detail-item">
+                                <span className="detail-label">Started:</span>
+                                <span className="detail-value">May 27, 2025</span>
+                              </div>
+                              <div className="step-detail-item">
+                                <span className="detail-label">Progress:</span>
+                                <span className="detail-value">{progressValues[4]}%</span>
+                              </div>
+                              <div className="step-detail-item">
+                                <span className="detail-label">Status:</span>
+                                <span className="detail-value failed">Failed</span>
+                              </div>
+                              <div className="step-detail-item">
+                                <span className="detail-label">Error Code:</span>
+                                <span className="detail-value failed">ERR-5432</span>
+                              </div>
+                              <div className="step-progress-bar">
+                                <div className="step-progress-fill" style={{ width: `${progressValues[4]}%`, backgroundColor: 'rgba(255, 0, 153, 0.5)' }}></div>
+                              </div>
+                              <div className="step-notes error-notes">
+                                <p>Deployment failed: Database migration error. Unable to establish connection to production server.</p>
+                                <p>Check server logs for more details and try again after fixing the connection issue.</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="step-detail-item">
+                                <span className="detail-label">
+                                  {stepStatuses[4] === 'in-progress' ? 'Started:' : 'Expected Start:'}
+                                </span>
+                                <span className="detail-value">May 27, 2025</span>
+                              </div>
+                              {stepStatuses[4] === 'in-progress' && (
+                                <div className="step-detail-item">
+                                  <span className="detail-label">Progress:</span>
+                                  <span className="detail-value">{progressValues[4]}%</span>
+                                </div>
+                              )}
+                              <div className="step-detail-item">
+                                <span className="detail-label">Status:</span>
+                                <span className={`detail-value ${stepStatuses[4]}`}>
+                                  {stepStatuses[4] === 'in-progress' ? 'In Progress' : 'Pending'}
+                                </span>
+                              </div>
+                              {stepStatuses[4] === 'in-progress' && (
+                                <div className="step-progress-bar">
+                                  <div className="step-progress-fill" style={{ width: `${progressValues[4]}%` }}></div>
+                                </div>
+                              )}
+                              <div className="step-notes">
+                                <p>
+                                  {stepStatuses[4] === 'in-progress' ? 
+                                    'Deploying to production environment. Setting up database migrations.' : 
+                                    'Infrastructure preparation in progress. Deployment scripts ready.'}
+                                </p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
