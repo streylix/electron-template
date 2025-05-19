@@ -1,12 +1,13 @@
 import React, { useState, createContext, useContext, useCallback } from 'react';
 import './App.css';
-import { CheckCircle, XCircle, LogIn, LayoutList } from 'lucide-react';
+import { CheckCircle, XCircle, LogIn, LayoutList, Globe } from 'lucide-react';
 import LoadingCircle from './components/common/LoadingCircle';
 
 // Template components will be imported
 import LoadingScreen from './components/templates/LoadingScreen';
 import LoginPage from './components/templates/LoginPage';
 import SidebarContentPage from './components/templates/SidebarContentPage';
+import PageFinder from './components/templates/PageFinder';
 import SnackBar from './components/common/SnackBar';
 
 // Create SnackBar context
@@ -42,6 +43,7 @@ function App() {
     { id: 'loading', title: 'Loading Screen', icon: <LoadingCircle size={24} />, component: <LoadingScreen onComplete={handleBack} /> },
     { id: 'login', title: 'Login Page', icon: <LogIn size={24} />, component: <LoginPage onComplete={handleBack} /> },
     { id: 'sidebar-content', title: 'Sidebar | Content', icon: <LayoutList size={24} />, component: <SidebarContentPage onComplete={handleBack} /> },
+    { id: 'page-finder', title: 'Page Finder', icon: <Globe size={24} />, component: <PageFinder onComplete={handleBack} /> },
   ];
 
   const handleTemplateClick = (templateId) => {

@@ -816,6 +816,107 @@ const SidebarContentPage = ({ onComplete }) => {
                   </div>
                   
                   <div className="settings-section">
+                    <h4>Page Finder</h4>
+                    <p>Page finder with progress tracking</p>
+                    <div className="page-finder-container">
+                      <div className="page-finder-browser">
+                        <div className="mini-browser-controls">
+                          <button 
+                            className="mini-browser-nav-btn"
+                            disabled={!canGoBack}
+                            onClick={browserGoBack}
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+                          <button 
+                            className="mini-browser-nav-btn"
+                            disabled={!canGoForward}
+                            onClick={browserGoForward}
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                          <input 
+                            type="text" 
+                            className="mini-url-input" 
+                            value={browserUrl}
+                            onChange={(e) => setBrowserUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                // Ensure URL has proper format
+                                let url = e.target.value;
+                                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                                  url = 'https://' + url;
+                                  setBrowserUrl(url);
+                                }
+                                // Navigate to new URL
+                                if (webviewRef.current) {
+                                  webviewRef.current.src = url;
+                                }
+                              }
+                            }}
+                          />
+                          <button 
+                            className="mini-browser-refresh-btn"
+                            onClick={browserRefresh}
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                        </div>
+                        <div className="mini-browser-container">
+                          <webview 
+                            src={browserUrl}
+                            style={{width: '100%', height: '100%'}}
+                            allowpopups="true"
+                          ></webview>
+                        </div>
+                      </div>
+                      
+                      <div className="page-finder-tracker">
+                        <div className="finder-progress-step">
+                          <div className="step-status complete">
+                            <Check size={14} />
+                          </div>
+                          <div className="step-label">Connected</div>
+                          <div className="step-percentage complete">100%</div>
+                        </div>
+                        
+                        <div className="finder-progress-step">
+                          <div className="step-status in-progress">
+                            <LoadingCircle size={14} />
+                          </div>
+                          <div className="step-label loading">Scanning page...</div>
+                          <div className="step-percentage in-progress">45%</div>
+                        </div>
+                        
+                        <div className="finder-progress-step">
+                          <div className="step-status pending">⭘</div>
+                          <div className="step-label">Extract data</div>
+                          <div className="step-percentage">0%</div>
+                        </div>
+                        
+                        <div className="step-progress-bar">
+                          <div className="step-progress-fill" style={{ width: '45%' }}></div>
+                        </div>
+                        
+                        <div className="finder-detected-items">
+                          <div className="finder-detected-item">
+                            <span className="finder-item-name">Forms:</span>
+                            <span className="finder-item-value">2</span>
+                          </div>
+                          <div className="finder-detected-item">
+                            <span className="finder-item-name">Links:</span>
+                            <span className="finder-item-value">28</span>
+                          </div>
+                          <div className="finder-detected-item">
+                            <span className="finder-item-name">Images:</span>
+                            <span className="finder-item-value">15</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="settings-section">
                     <h4>Snackbar Test</h4>
                     <p>Test different types of snackbar notifications</p>
                     <div className="snackbar-test-buttons">
